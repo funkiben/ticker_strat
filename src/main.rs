@@ -2,7 +2,7 @@ use std::io::Error;
 use std::sync::Arc;
 use std::time::Duration;
 
-use my_http::common::header::{CONTENT_LENGTH, HeaderMap, HeaderMapOps};
+use my_http::common::header::CONTENT_LENGTH;
 use my_http::common::response::Response;
 use my_http::common::status::OK_200;
 use my_http::header_map;
