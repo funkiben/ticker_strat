@@ -14,6 +14,7 @@ fn main() -> Result<(), Error> {
     });
 
     server.router.on_prefix("/", |_, _| {
+        println!("Received a request");
         let message = b"I work!";
         SendResponse(Response {
             status: OK_200,
@@ -22,5 +23,6 @@ fn main() -> Result<(), Error> {
         })
     });
 
+    println!("Starting server");
     server.start()
 }
