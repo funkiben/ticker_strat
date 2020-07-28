@@ -13,7 +13,7 @@ fn main() -> Result<(), Error> {
     let mut server = Server::new(Config {
         addr: "0.0.0.0:80",
         connection_handler_threads: 5,
-        read_timeout: Duration::from_millis(10000),
+        read_timeout: Duration::from_millis(1000),
     });
 
     let response_message = b"I work!";
