@@ -1,10 +1,12 @@
 use std::io::Error;
-use my_http::server::{Server, Config};
+use std::sync::Arc;
 use std::time::Duration;
+
 use my_http::common::header::{CONTENT_LENGTH, HeaderMapOps};
-use my_http::common::status::OK_200;
 use my_http::common::response::Response;
-use my_http::server::ListenerResult::SendResponse;
+use my_http::common::status::OK_200;
+use my_http::server::{Config, Server};
+use my_http::server::ListenerResult::SendResponseArc;
 
 fn main() -> Result<(), Error> {
     let mut server = Server::new(Config {
@@ -13,14 +15,19 @@ fn main() -> Result<(), Error> {
         read_timeout: Duration::from_millis(10000),
     });
 
-    server.router.on_prefix("/", |_, _| {
+    let response_message = b"I work!";
+    let response = Response {
+        status: OK_200,
+        headers: HeaderMapOps::from(vec![
+            (CONTENT_LENGTH, response_message.len().to_string())
+        ]),
+        body: response_message.to_vec(),
+    };
+
+    let response = Arc::new(response);
+    server.router.on_prefix("/", move |_, _| {
         println!("Received a request");
-        let message = b"I work!";
-        SendResponse(Response {
-            status: OK_200,
-            headers: HeaderMapOps::from(vec![(CONTENT_LENGTH, message.len().to_string())]),
-            body: message.to_vec(),
-        })
+        SendResponseArc(Arc::clone(&response))
     });
 
     println!("Starting server");
