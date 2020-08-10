@@ -1,7 +1,7 @@
 {
   "name": "ticerkstrat_header",
   "version": "1.0.0",
-  "description": "Global header for tickerstrat.io",
+  "description": "Global header and footer for tickerstrat.io",
   "private": true,
   "scripts": {
     "prod": "webpack --config webpack.prod.js",

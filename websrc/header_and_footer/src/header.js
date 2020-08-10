@@ -1,6 +1,6 @@
 import header_css from './styles/header.css';
 import fonts_css from './styles/fonts.css';
-import header_template from './templates/header.html';
+import header_template from './templates/_header.html';
 
 const minHeight = 50;
 const maxHeight = 80;

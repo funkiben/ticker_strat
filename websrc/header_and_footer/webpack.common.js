@@ -1,6 +1,7 @@
 module.exports = {
     entry: {
         header: './src/header.js',
+        footer: './src/footer.js'
     },
     output: {
         filename: '[name].js',

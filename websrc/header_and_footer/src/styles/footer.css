@@ -1,0 +1,43 @@
+:host {
+    --footer-height: 80px;
+    --navy: #182628;
+    --green: #3B945E;
+}
+
+#footer {
+    width: 100%;
+    height: var(--footer-height);
+    background-color: var(--navy);
+    color: var(--green);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+#title {
+    margin-left: 15px;
+    font-family: Courgette-Regular, cursive;
+    font-size: x-large;
+}
+
+/*#links {*/
+/*    list-style-type: none;*/
+/*    margin-right: 10px;*/
+/*    padding: 0;*/
+/*}*/
+
+/*.m-link {*/
+/*    float: left;*/
+/*    margin: 10px;*/
+/*    text-decoration: underline;*/
+/*}*/
+
+/*.sub-links {*/
+/*    list-style-type: none;*/
+/*    padding: 0;*/
+/*    margin: 0;*/
+/*}*/
+
+/*.s-link {*/
+/*    text-decoration-line: none;*/
+/*}*/
