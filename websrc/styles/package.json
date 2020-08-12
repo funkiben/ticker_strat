@@ -1,0 +1,14 @@
+{
+  "name": "ticerkstrat_header_and_footer",
+  "version": "1.0.0",
+  "description": "Global header and footer for tickerstrat.io",
+  "private": true,
+  "scripts": {
+    "prod": "node main.js"
+  },
+  "author": "tickerstrat.io Dev Team",
+  "devDependencies": {
+    "fs": "0.0.1-security",
+    "uglifycss": "0.0.29"
+  }
+}
