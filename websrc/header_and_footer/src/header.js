@@ -23,9 +23,12 @@ class Header extends HTMLElement {
         logo.src = resolveAbsolutePath(logo);
 
         window.addEventListener('scroll', function() {
-            let header = shadowDom.getElementById('header');
-            let change = Math.max(document.body.scrollTop, document.documentElement.scrollTop);
-            header.style.setProperty('height', Math.max(maxHeight - change, minHeight).toString() + 'px');
+            if (screen.width > 576) {
+                console.log('triggered')
+                let header = shadowDom.getElementById('header');
+                let change = Math.max(document.body.scrollTop, document.documentElement.scrollTop);
+                header.style.setProperty('height', Math.max(maxHeight - change, minHeight).toString() + 'px');
+            }
         });
     }
 }
