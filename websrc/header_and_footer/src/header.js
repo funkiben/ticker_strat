@@ -1,6 +1,6 @@
 import header_css from './styles/header.css';
-import fonts_css from './styles/fonts.css';
 import header_template from './templates/_header.html';
+import resolveAbsolutePath from './resolveAbsolutePath';
 
 const minHeight = 50;
 const maxHeight = 80;
@@ -15,13 +15,12 @@ class Header extends HTMLElement {
         styleSheet.innerHTML = header_css;
         shadowDom.appendChild(styleSheet);
 
-        let fonts = document.createElement('style');
-        fonts.innerHTML = fonts_css;
-        document.head.appendChild(fonts);
-
         let wrapper = document.createElement('div');
         wrapper.innerHTML = header_template;
         shadowDom.appendChild(wrapper);
+
+        let logo = shadowDom.getElementById('logo');
+        logo.src = resolveAbsolutePath(logo);
 
         window.addEventListener('scroll', function() {
             let header = shadowDom.getElementById('header');

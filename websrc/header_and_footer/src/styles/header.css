@@ -16,8 +16,6 @@
     padding-left: 15px;
 }
 
-#title {
-    color: var(--green);
-    font-family: Courgette-Regular, cursive;
-    font-size: xx-large;
+#logo {
+    height: 30px;
 }

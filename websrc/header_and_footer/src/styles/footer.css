@@ -14,10 +14,8 @@
     justify-content: space-between;
 }
 
-#title {
-    margin-left: 15px;
-    font-family: Courgette-Regular, cursive;
-    font-size: x-large;
+#logo {
+    height: 40px;
 }
 
 /*#links {*/
