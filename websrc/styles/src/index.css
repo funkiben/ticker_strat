@@ -57,11 +57,11 @@ body, html {
 }
 
 #bgimg-1 {
-    background-image: url("../assets/parallax1.jpg");
+    background-image: url("../assets/index/parallax1.jpg");
 }
 
 #bgimg-2 {
-    background-image: url("../assets/parallax2.jpg");
+    background-image: url("../assets/index/parallax2.jpg");
 }
 
 /* Turn off parallax scrolling for tablets and phones */
