@@ -1,0 +1,22 @@
+{
+  "name": "ticerkstrat_header_and_footer",
+  "version": "1.0.0",
+  "description": "Global header and footer for tickerstrat.io",
+  "private": true,
+  "scripts": {
+    "prod": "webpack --config webpack.prod.js",
+    "dev": "webpack --config webpack.dev.js",
+    "watch": "webpack --config webpack.dev.js --watch"
+  },
+  "author": "tickerstrat.io Dev Team",
+  "devDependencies": {
+    "clean-webpack-plugin": "^3.0.0",
+    "copy-webpack-plugin": "^6.0.3",
+    "css-loader": "^4.2.1",
+    "file-loader": "^6.0.0",
+    "html-loader": "^1.1.0",
+    "webpack": "^4.44.1",
+    "webpack-cli": "^3.3.12",
+    "webpack-merge": "^5.1.1"
+  }
+}

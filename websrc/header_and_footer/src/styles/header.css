@@ -1,0 +1,21 @@
+:host {
+    --header-height: 80px;
+    --navy: #182628;
+    --green: #3B945E;
+}
+
+#header {
+    background-color: var(--navy);
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: var(--header-height);
+    display: flex;
+    align-items: center;
+}
+
+#logo {
+    margin-left: 15px;
+    height: 30px;
+}
