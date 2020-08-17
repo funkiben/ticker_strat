@@ -13,9 +13,9 @@
     height: var(--header-height);
     display: flex;
     align-items: center;
-    padding-left: 15px;
 }
 
 #logo {
+    margin-left: 15px;
     height: 30px;
 }

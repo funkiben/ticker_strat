@@ -11,7 +11,7 @@ body, html {
     height: 100%;
     margin: 0;
     font-family: sans-serif;
-    background-color: var(--white);
+    background-color: var(--navy);
 }
 
 .heading {
@@ -31,6 +31,10 @@ body, html {
     text-align: justify;
     margin: 15px 0;
     font-size: large;
+}
+
+.parallax-holder {
+    background-color: var(--white);
 }
 
 .parallax {

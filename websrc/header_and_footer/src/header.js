@@ -24,7 +24,6 @@ class Header extends HTMLElement {
 
         window.addEventListener('scroll', function() {
             if (screen.width > 576) {
-                console.log('triggered')
                 let header = shadowDom.getElementById('header');
                 let change = Math.max(document.body.scrollTop, document.documentElement.scrollTop);
                 header.style.setProperty('height', Math.max(maxHeight - change, minHeight).toString() + 'px');
