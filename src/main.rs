@@ -37,7 +37,6 @@ fn file_router(directory: &'static str) -> Router {
             path.push_str("index.html")
         }
 
-
         if let Some(response) = cache.read().unwrap().get(&path) { // read lock gets dropped after if statement
             return SendResponseArc(Arc::clone(response));
         }
