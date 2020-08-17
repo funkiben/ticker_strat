@@ -4,7 +4,7 @@
     --cyan: #65CCB7;
     --light-green: #56BA98;
     --dark-green: #3B945E;
-    --dark-grey: #474B4F
+    --dark-grey: #474B4F;
 }
 
 body, html {
@@ -22,15 +22,19 @@ body, html {
 }
 
 .paragraph-holder {
-    color: var(--dark-grey);
+    color: var(--navy);
     background-color: var(--cyan);
     padding: 30px 10%;
+}
+
+.paragraph-holder>h2 {
+    font-size: xx-large;
 }
 
 .paragraph {
     text-align: justify;
     margin: 15px 0;
-    font-size: large;
+    font-size: x-large;
 }
 
 .parallax-holder {
