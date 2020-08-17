@@ -1,26 +1,75 @@
 use std::io::Error;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use my_http::server::{Config, Server};
+use my_http::server::{Config, Server, Router};
 use my_http::server::ListenerResult::SendResponseArc;
+use std::collections::HashMap;
+use my_http::common::response::Response;
+use my_http::common::status;
+use my_http::common::header;
+use my_http::header_map;
+use std::fs;
 
 fn main() -> Result<(), Error> {
     let mut server = Server::new(Config {
         addr: "0.0.0.0:80",
-        connection_handler_threads: 5,
+        connection_handler_threads: 10,
         read_timeout: Duration::from_millis(1000),
         tls_config: None,
     });
 
-    let response = "I work!".into();
-    let response = Arc::new(response);
+    server.router.route("/", file_router("./web/"));
 
-    server.router.on_prefix("/", move |_, _| {
-        println!("Received a request");
+    server.start()
+}
+
+fn file_router(directory: &'static str) -> Router {
+    let mut router = Router::new();
+
+    let cache: Mutex<HashMap<String, Arc<Response>>> = Mutex::new(HashMap::new());
+
+    router.on_prefix("", move |uri, _| {
+        let mut path = String::from(directory);
+        path.push_str(uri);
+
+        if path.ends_with("/") {
+            path.push_str("index.html")
+        }
+
+        let mut cache = cache.lock().unwrap();
+
+        let response = cache.entry(path.clone()).or_insert_with(|| Arc::new(file_response(&path)));
+
         SendResponseArc(Arc::clone(&response))
     });
 
-    println!("Starting server");
-    server.start()
+    router
+}
+
+fn file_response(file_path: &str) -> Response {
+    if let Ok(contents) = fs::read(file_path) {
+        let headers = header_map![
+            (header::CONTENT_LENGTH, contents.len().to_string()),
+            (header::CONTENT_TYPE, get_content_type(file_path))
+        ];
+
+        return Response { status: status::OK, headers, body: contents };
+    }
+    return status::NOT_FOUND.into();
+}
+
+fn get_content_type(path: &str) -> &'static str {
+    if path.ends_with(".ico") {
+        return "image/x-icon";
+    } else if path.ends_with(".js") {
+        return "application/javascript";
+    } else if path.ends_with(".svg") {
+        return "image/svg+xml";
+    } else if path.ends_with(".html") {
+        return "text/html";
+    } else if path.ends_with(".css") {
+        return "text/css";
+    }
+    "text/plain"
 }
