@@ -11,6 +11,11 @@ use my_http::header_map;
 use my_http::server::{Config, Router, Server};
 use my_http::server::ListenerResult::SendResponseArc;
 
+mod logging_manager;
+
+use logging_manager::*;
+use std::path::Path;
+
 fn main() -> Result<(), Error> {
     let mut server = Server::new(Config {
         addr: "0.0.0.0:80",
@@ -20,6 +25,8 @@ fn main() -> Result<(), Error> {
     });
 
     server.router.route("/", file_router("./web/"));
+
+    LoggingService::new(LoggingConfig { logging_directory: Path::new("./logs/"), max_dir_size: 100000 }).expect("Logging Service failed to start.");
 
     server.start()
 }
