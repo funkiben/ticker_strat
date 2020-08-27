@@ -272,13 +272,13 @@ mod tests {
     #[test]
     fn test_check_date() {
         assert_eq!(false, check_date(""));
-        assert_eq!(true, check_date(curr_datestamp().as_str()));
-        assert_eq!(true, check_date("2020_02_29"));
+        assert!(check_date(curr_datestamp().as_str()));
+        assert!(check_date("2020_02_29"));
         assert_eq!(false, check_date("2019_02_29"));
         assert_eq!(false, check_date("2020_02_30"));
         assert_eq!(false, check_date("2020_13_31"));
         assert_eq!(false, check_date("2045_12_45"));
-        assert_eq!(true, check_date("2020/02/29"));
+        assert!(check_date("2020/02/29"));
         assert_eq!(false, check_date("2020_02"));
         assert_eq!(false, check_date("some string"));
         assert_eq!(false, check_date("2020*02&29"));
@@ -286,9 +286,9 @@ mod tests {
 
     #[test]
     fn test_leap_year() {
-        assert_eq!(true, utils::is_leap_year(2020));
+        assert!(utils::is_leap_year(2020));
         assert_eq!(false, utils::is_leap_year(1900));
-        assert_eq!(true, utils::is_leap_year(2024));
+        assert!(utils::is_leap_year(2024));
         assert_eq!(false, utils::is_leap_year(2019));
     }
 }

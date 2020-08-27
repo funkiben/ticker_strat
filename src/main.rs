@@ -26,7 +26,8 @@ fn main() -> Result<(), Error> {
 
     server.router.route("/", file_router("./web/"));
 
-    LoggingService::new(LoggingConfig { logging_directory: Path::new("./logs/"), max_dir_size: 100000 }).expect("Logging Service failed to start.");
+    let logging_service = LoggingService::new(LoggingConfig { logging_directory: Path::new("./logs/"), max_dir_size: 100000 });
+    logging_service.init(log::LevelFilter::Info).expect("Logging Service failed to start.");
 
     server.start()
 }
