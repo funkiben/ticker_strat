@@ -1,11 +1,11 @@
 mod time_manager;
 
+use log::{Level, Metadata, Record};
 use std::fs::{create_dir, read_dir, remove_file, DirEntry, OpenOptions};
 use std::io::{Error, Write};
 use std::path::Path;
 use std::sync::mpsc;
 use std::thread;
-use log::{Metadata, Record, Level, SetLoggerError, LevelFilter};
 
 /// Struct holding sender to dedicated logging thread
 pub struct LoggingService {
@@ -30,10 +30,11 @@ pub struct LoggingConfig {
     pub logging_directory: &'static Path,
     /// The maximum size of the logging directory in bytes
     pub max_dir_size: usize,
+    /// The max size of the buffer that sends messages to the logger
+    pub buffer_size: usize,
 }
 
 impl LoggingService {
-
     /// Create a new LoggingService instance holding the sender to the dedicated logging thread.
     ///
     /// # Arguments
@@ -41,43 +42,20 @@ impl LoggingService {
     /// * `options` - LoggingConfig struct containing the options for the new logging service instance.
     ///
     pub fn new(options: LoggingConfig) -> LoggingService {
-        let (sender, receiver) = mpsc::sync_channel(1);
+        let (sender, receiver) = mpsc::sync_channel(options.buffer_size);
 
         // kick off logging thread
         thread::spawn(move || loop {
             match receiver.recv().unwrap() {
                 LoggingCommands::Message(message) => {
-                    log(message, &options)
-                        .expect("Logging service failed when receiving message.");
+                    log(message, &options).expect("Logging service failed when receiving message.");
                 }
                 LoggingCommands::Kill => break,
             }
         });
 
         LoggingService { sender }
-
     }
-
-    /// Initiate global logger by boxing the service and sending it to the global logger.
-    ///
-    /// # Arguments
-    ///
-    /// * `max_logging_level` - LevelFilter representing the max logging level for the logging service.
-    /// Note: The order of logging levels (decreasing) is: Trace, Debug, Info, Warn, Error.
-    /// Therefore, specifying Debug as the max logging level will ignore Trace logging messages.
-    ///
-    pub fn init(self, max_logging_level: LevelFilter) -> Result<(), SetLoggerError> {
-
-        // box logger
-        let logger = Box::new(self);
-
-        // set global logger
-        log::set_boxed_logger(logger)
-            .map(|()| log::set_max_level(max_logging_level))?;
-
-        Ok(())
-    }
-
 }
 
 impl Drop for LoggingService {
@@ -94,7 +72,6 @@ impl log::Log for LoggingService {
     }
 
     fn log(&self, record: &Record) {
-
         // convert level to string
         let level = match record.level() {
             Level::Error => String::from(" ERROR "),
@@ -105,13 +82,14 @@ impl log::Log for LoggingService {
         };
 
         self.sender
-            .send(LoggingCommands::Message(MessageBody { content: record.args().to_string(), level}))
+            .send(LoggingCommands::Message(MessageBody {
+                content: record.args().to_string(),
+                level,
+            }))
             .expect("Failed to send message to logging service.");
     }
 
-    fn flush(&self) {
-        unimplemented!()
-    }
+    fn flush(&self) {}
 }
 
 // write a message to a log file
@@ -139,7 +117,13 @@ fn log(message_body: MessageBody, options: &LoggingConfig) -> Result<(), Error> 
         .open(log_file_path)?;
 
     // write message
-    file.write_all((time_manager::curr_timestamp() + message_body.level.as_str() + message_body.content.as_str() + "\n").as_bytes())?;
+    file.write_all(
+        (time_manager::curr_timestamp()
+            + message_body.level.as_str()
+            + message_body.content.as_str()
+            + "\n")
+            .as_bytes(),
+    )?;
     file.sync_all()
 }
 
@@ -199,12 +183,13 @@ fn get_sorted_files_from_dir(logging_directory: &Path) -> Result<Vec<DirEntry>, 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fs::{remove_dir_all, File, remove_dir};
+    use log::*;
+    use std::error::Error;
+    use std::fs::{remove_dir, remove_dir_all, File};
+    use std::io::{BufRead, BufReader};
     use std::thread;
     use std::time;
-    use std::error::Error;
-    use std::io::{BufReader, BufRead};
-    use log::*;
+    use std::time::Duration;
 
     #[test]
     fn test_log() -> Result<(), Box<dyn Error>> {
@@ -212,40 +197,80 @@ mod tests {
         let logging_service = LoggingService::new(LoggingConfig {
             logging_directory,
             max_dir_size: 10000,
+            buffer_size: 64,
         });
-        logging_service.init(log::LevelFilter::Trace)?;
+
+        // box logger
+        let logger = Box::new(logging_service);
+
+        // set global logger
+        log::set_boxed_logger(logger)
+            .map(|()| log::set_max_level(log::LevelFilter::Trace))
+            .expect("Logging Service failed to start.");
+
         let current_date = time_manager::curr_datestamp();
         let log_file_name = format!("{}.log", current_date);
-        let log_file_path_buf = logging_directory
-            .join(log_file_name);
+        let log_file_path_buf = logging_directory.join(log_file_name);
         let log_file_path = log_file_path_buf.as_path();
 
         // try logging different messages
         // "[YYYY-MM-DD HH:MM:SS] DEBUG test debug"
-        debug!("test debug");
+        thread::spawn(|| {
+            debug!("test debug");
+        });
         // "[YYYY-MM-DD HH:MM:SS] ERROR test error"
-        error!("test error");
+        thread::spawn(|| {
+            thread::sleep(Duration::from_millis(100));
+            error!("test error");
+        });
         // "[YYYY-MM-DD HH:MM:SS] INFO  test info"
-        info!("test info");
+        thread::spawn(|| {
+            thread::sleep(Duration::from_millis(200));
+            info!("test info");
+        });
         // "[YYYY-MM-DD HH:MM:SS] TRACE test trace"
-        trace!("test trace");
+        thread::spawn(|| {
+            thread::sleep(Duration::from_millis(300));
+            trace!("test trace");
+        });
         // "[YYYY-MM-DD HH:MM:SS] WARN  test warning"
-        warn!("test warning");
+        thread::spawn(|| {
+            thread::sleep(Duration::from_millis(400));
+            warn!("test warning");
+        });
 
         // sleep because logging is done on a different thread (and will take time)
-        thread::sleep(time::Duration::from_millis(10));
+        thread::sleep(time::Duration::from_millis(600));
 
         // make sure file is there and contents are correct
-        assert!(
-            log_file_path.exists()
-        );
+        assert!(log_file_path.exists());
         let log_file = File::open(log_file_path)?;
         let mut lines = BufReader::new(log_file).lines();
-        assert!(lines.next().unwrap().unwrap().ends_with("] DEBUG test debug"));
-        assert!(lines.next().unwrap().unwrap().ends_with("] ERROR test error"));
-        assert!(lines.next().unwrap().unwrap().ends_with("] INFO  test info"));
-        assert!(lines.next().unwrap().unwrap().ends_with("] TRACE test trace"));
-        assert!(lines.next().unwrap().unwrap().ends_with("] WARN  test warning"));
+        assert!(lines
+            .next()
+            .unwrap()
+            .unwrap()
+            .ends_with("] DEBUG test debug"));
+        assert!(lines
+            .next()
+            .unwrap()
+            .unwrap()
+            .ends_with("] ERROR test error"));
+        assert!(lines
+            .next()
+            .unwrap()
+            .unwrap()
+            .ends_with("] INFO  test info"));
+        assert!(lines
+            .next()
+            .unwrap()
+            .unwrap()
+            .ends_with("] TRACE test trace"));
+        assert!(lines
+            .next()
+            .unwrap()
+            .unwrap()
+            .ends_with("] WARN  test warning"));
         assert!(lines.next().is_none());
 
         // clean up
@@ -256,7 +281,6 @@ mod tests {
 
     #[test]
     fn test_check_size() -> Result<(), std::io::Error> {
-
         // random files and configs
         let file1 = Path::new("2020_08_01.log");
         let file2 = Path::new("2020_08_02.log");
@@ -264,15 +288,18 @@ mod tests {
         let random_text = "Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.";
         let config1 = LoggingConfig {
             logging_directory: Path::new("./test_logs2/"),
-            max_dir_size: 0
+            max_dir_size: 0,
+            buffer_size: 1,
         };
         let config2 = LoggingConfig {
             logging_directory: Path::new("./test_logs3/"),
-            max_dir_size: 1000
+            max_dir_size: 1000,
+            buffer_size: 1,
         };
         let config3 = LoggingConfig {
             logging_directory: Path::new("./test_logs4/"),
-            max_dir_size: 10000
+            max_dir_size: 10000,
+            buffer_size: 1,
         };
 
         // config 1: max dir size is 0, all files should be deleted

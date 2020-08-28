@@ -8,8 +8,8 @@ use my_http::common::header;
 use my_http::common::response::Response;
 use my_http::common::status;
 use my_http::header_map;
-use my_http::server::{Config, Router, Server};
 use my_http::server::ListenerResult::SendResponseArc;
+use my_http::server::{Config, Router, Server};
 
 mod logging_manager;
 
@@ -26,8 +26,19 @@ fn main() -> Result<(), Error> {
 
     server.router.route("/", file_router("./web/"));
 
-    let logging_service = LoggingService::new(LoggingConfig { logging_directory: Path::new("./logs/"), max_dir_size: 100000 });
-    logging_service.init(log::LevelFilter::Info).expect("Logging Service failed to start.");
+    let logging_service = LoggingService::new(LoggingConfig {
+        logging_directory: Path::new("./logs/"),
+        max_dir_size: 100000,
+        buffer_size: 64,
+    });
+
+    // box logger
+    let logger = Box::new(logging_service);
+
+    // set global logger
+    log::set_boxed_logger(logger)
+        .map(|()| log::set_max_level(log::LevelFilter::Info))
+        .expect("Logging Service failed to start.");
 
     server.start()
 }
@@ -45,7 +56,8 @@ fn file_router(directory: &'static str) -> Router {
             path.push_str("index.html")
         }
 
-        if let Some(response) = cache.read().unwrap().get(&path) { // read lock gets dropped after if statement
+        if let Some(response) = cache.read().unwrap().get(&path) {
+            // read lock gets dropped after if statement
             return SendResponseArc(Arc::clone(response));
         }
 
@@ -66,7 +78,11 @@ fn file_response(file_path: &str) -> Response {
             (header::CONTENT_TYPE, get_content_type(file_path))
         ];
 
-        return Response { status: status::OK, headers, body: contents };
+        return Response {
+            status: status::OK,
+            headers,
+            body: contents,
+        };
     }
     return status::NOT_FOUND.into();
 }
