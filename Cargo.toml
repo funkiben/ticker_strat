@@ -8,3 +8,4 @@ edition = "2018"
 
 [dependencies]
 my_http = { git = "https://github.com/funkiben/Rust-HTTP" }
+log = { version = "0.4.11", features = ["std"] }
