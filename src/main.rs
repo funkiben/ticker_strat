@@ -3,26 +3,28 @@ use std::fs;
 use std::io::Error;
 use std::sync::{Arc, RwLock};
 
-use my_http::{header_map, server};
 use my_http::common::header;
 use my_http::common::response::Response;
 use my_http::common::status;
-use my_http::server::{Config, Router};
 use my_http::server::ListenerResult::SendResponseArc;
 use my_http::server::{Config, Router, Server};
+use my_http::{header_map, server};
 
 mod logging_manager;
 
 use logging_manager::*;
 use std::path::Path;
+use std::time::Duration;
 
 fn main() -> Result<(), Error> {
-    server::start(Config {
+    let mut server = Server::new(Config {
         addr: "0.0.0.0:80",
         connection_handler_threads: 5,
+        read_timeout: Duration::from_millis(10),
         tls_config: None,
-        router: file_router("./web/"),
     });
+
+    server.router = file_router("./web");
 
     let logging_service = LoggingService::new(LoggingConfig {
         logging_directory: Path::new("./logs/"),
@@ -37,6 +39,8 @@ fn main() -> Result<(), Error> {
     log::set_boxed_logger(logger)
         .map(|()| log::set_max_level(log::LevelFilter::Info))
         .expect("Logging Service failed to start.");
+
+    server.start()
 }
 
 fn file_router(directory: &'static str) -> Router {
