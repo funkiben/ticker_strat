@@ -11,10 +11,9 @@ use my_http::server::{Config, Router};
 use my_http::server::ListenerResult::SendResponseArc;
 
 fn main() -> Result<(), Error> {
-    server::start(Config {
+    server::listen_http(Config {
         addr: "0.0.0.0:80",
         connection_handler_threads: 5,
-        tls_config: None,
         router: file_router("./web/"),
     })
 }
