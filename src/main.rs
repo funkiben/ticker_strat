@@ -11,6 +11,7 @@ use my_http::server::{Config, Router};
 use my_http::{header_map, server};
 
 mod logging_manager;
+mod templating_manager;
 
 use logging_manager::*;
 use std::path::Path;
