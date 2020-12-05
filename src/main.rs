@@ -10,6 +10,7 @@ use my_http::server::ListenerResult::SendResponseArc;
 use my_http::server::{Config, Router};
 use my_http::{header_map, server};
 
+mod graph;
 mod logging_manager;
 
 use logging_manager::*;
