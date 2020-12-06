@@ -33,6 +33,18 @@ impl<T: Eq + PartialEq> Vertex<T> {
         self.neighbors.len()
     }
 
+    fn traverse<F>(&self, f: &F, seen: &mut Vec<usize>)
+        where F: Fn(&T)
+    {
+        if seen.contains(&self.label) {
+            return;
+        }
+        f(&self.value);
+        seen.push(self.label);
+        for n in &self.neighbors {
+            n.borrow().traverse(f, seen);
+        }
+    }
 }
 
 #[cfg(test)]
@@ -42,14 +54,17 @@ mod tests {
     #[test]
     fn test_basic_graph_setup() {
         let root = Vertex::new(0, "Hello");
-        let neighbor = Vertex::new(1, "World");
+        let neighbor_one = Vertex::new(1, "World");
+        let neighbor_two = Vertex::new(2, "!");
 
-        root.borrow_mut().add_neighbor(neighbor.clone());
+        let mut mut_root = root.borrow_mut();
+        mut_root.add_neighbor(neighbor_one.clone());
+        mut_root.add_neighbor(neighbor_two.clone());
 
-        let neighbors = root.borrow().num_neighbors();
-        assert_eq!(1, neighbors);
+        assert_eq!(2, mut_root.num_neighbors());
+        assert!(mut_root.has_neighbor(&neighbor_one));
+        assert!(mut_root.has_neighbor(&neighbor_two));
 
-        let has_neighbor = root.borrow().has_neighbor(&neighbor);
-        assert!(has_neighbor);
+        mut_root.traverse(&|d| println!("{}", d), &mut Vec::new());
     }
 }
