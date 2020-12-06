@@ -1,6 +1,10 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
+struct Graph<T: Eq + PartialEq> {
+    vertices: Vec<Rc<RefCell<Vertex<T>>>>
+}
+
 #[derive(Eq, PartialEq)]
 struct Vertex<T: Eq + PartialEq> {
     label: usize,
@@ -33,7 +37,13 @@ impl<T: Eq + PartialEq> Vertex<T> {
         self.neighbors.len()
     }
 
-    fn traverse<F>(&self, f: &F, seen: &mut Vec<usize>)
+    pub fn traverse<F>(&self, f: &F)
+        where F: Fn(&T)
+    {
+        self.traverse_helper(f, &mut Vec::new())
+    }
+
+    fn traverse_helper<F>(&self, f: &F, seen: &mut Vec<usize>)
         where F: Fn(&T)
     {
         if seen.contains(&self.label) {
@@ -42,7 +52,7 @@ impl<T: Eq + PartialEq> Vertex<T> {
         f(&self.value);
         seen.push(self.label);
         for n in &self.neighbors {
-            n.borrow().traverse(f, seen);
+            n.borrow().traverse_helper(f, seen);
         }
     }
 }
@@ -65,6 +75,6 @@ mod tests {
         assert!(mut_root.has_neighbor(&neighbor_one));
         assert!(mut_root.has_neighbor(&neighbor_two));
 
-        mut_root.traverse(&|d| println!("{}", d), &mut Vec::new());
+        mut_root.traverse(&|d| println!("{}", d));
     }
 }
