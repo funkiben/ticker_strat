@@ -111,6 +111,7 @@ impl<T: Eq + PartialEq> Graph<T> {
         Err(GraphError::VertexNotFound(*label))
     }
 
+    // @TODO add checks for invalid edges
     pub fn add_edge(&self, label_source: &usize, label_sink: usize) -> bool {
         let vertex = self.get_vertex(label_source);
         if vertex.is_some() {
@@ -135,6 +136,42 @@ impl<T: Eq + PartialEq> Graph<T> {
             let mut neighbors = vertex.unwrap().borrow_mut();
             neighbors.delete_neighbor(label_sink);
         }
+    }
+
+    pub fn has_cycle(&self) -> bool {
+        let mut visited = Vec::new();
+        let mut rec_stack = Vec::new();
+        for vertex in &self.vertices {
+            let current_label = vertex.borrow().label.clone();
+            if !visited.contains(&current_label) {
+                if self.has_cycle_util(current_label, &mut visited, &mut rec_stack) {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+
+    fn has_cycle_util(&self, current_label: usize, visited: &mut Vec<usize>, rec_stack: &mut Vec<usize>) -> bool {
+        visited.push(current_label);
+        rec_stack.push(current_label);
+
+        for neighbor in &self.get_vertex(&current_label).unwrap().borrow().neighbors {
+            if !visited.contains(neighbor) {
+                if self.has_cycle_util(*neighbor, visited, rec_stack) {
+                    return true;
+                }
+            } else if rec_stack.contains(neighbor) {
+                return true;
+            }
+        }
+
+        for i in 0..rec_stack.len() {
+            if *rec_stack.get(i).unwrap() == current_label {
+                rec_stack.remove(i);
+            }
+        }
+        false
     }
 }
 
@@ -179,24 +216,6 @@ impl<T: Eq + PartialEq> Vertex<T> {
         self.neighbors.len()
     }
 
-    // pub fn traverse<F>(&self, f: &F)
-    //     where F: Fn(&T)
-    // {
-    //     self.traverse_helper(f, &mut Vec::new())
-    // }
-    //
-    // fn traverse_helper<F>(&self, f: &F, seen: &mut Vec<usize>)
-    //     where F: Fn(&T)
-    // {
-    //     if seen.contains(&self.label) {
-    //         return;
-    //     }
-    //     f(&self.value);
-    //     seen.push(self.label);
-    //     for n in &self.neighbors {
-    //         n.borrow().traverse_helper(f, seen);
-    //     }
-    // }
 }
 
 #[cfg(test)]
@@ -234,5 +253,22 @@ mod tests {
         assert_eq!(2, graph.num_vertices());
         assert_eq!(false, graph.has_vertex(&delete));
         Ok(())
+    }
+
+    // TODO more complex testing
+    #[test]
+    fn test_has_cycle() {
+        let mut graph = Graph::new();
+        assert_eq!(false, graph.has_cycle());
+
+        let hello  = graph.add_vertex("Hello");
+        assert_eq!(false, graph.has_cycle());
+
+        let world = graph.add_vertex("World");
+        graph.add_edge(&hello, world);
+        assert_eq!(false, graph.has_cycle());
+
+        graph.add_edge(&world, hello);
+        assert_eq!(true, graph.has_cycle());
     }
 }
