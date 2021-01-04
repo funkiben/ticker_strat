@@ -5,7 +5,8 @@ use std::fmt;
 
 #[derive(Debug)]
 enum GraphError {
-    VertexNotFound(usize)
+    VertexNotFound(usize),
+    InvalidEdge(usize, usize)
 }
 
 impl Error for GraphError {}
@@ -15,6 +16,9 @@ impl fmt::Display for GraphError {
         match self {
             GraphError::VertexNotFound(label) => {
                 write!(f, "Vertex with id {} not found in graph.", label)
+            },
+            GraphError::InvalidEdge(source, sink) => {
+                write!(f, "Edge from vertex with id {} to vertex with id {} is not valid.", source, sink)
             }
         }
     }
@@ -111,15 +115,26 @@ impl<T: Eq + PartialEq> Graph<T> {
         Err(GraphError::VertexNotFound(*label))
     }
 
-    // @TODO add checks for invalid edges
-    pub fn add_edge(&self, label_source: &usize, label_sink: usize) -> bool {
+    pub fn add_edge(&self, label_source: &usize, label_sink: usize) -> Result<bool, GraphError> {
+
+        if label_sink == *label_source {
+            return Err(GraphError::InvalidEdge(*label_source, label_sink))
+        }
+
+        if !self.has_vertex(&label_sink) {
+            return Err(GraphError::VertexNotFound(label_sink))
+        }
+
         let vertex = self.get_vertex(label_source);
         if vertex.is_some() {
             let mut neighbors = vertex.unwrap().borrow_mut();
-            neighbors.add_neighbor(label_sink);
-            return true
+            if !neighbors.has_neighbor(&label_sink) {
+                neighbors.add_neighbor(label_sink);
+                return Ok(true)
+            }
+            return Ok(false)
         }
-        false
+        Err(GraphError::VertexNotFound(*label_source))
     }
 
     pub fn has_edge(&self, label_source: &usize, label_sink: &usize) -> bool {
@@ -227,6 +242,7 @@ mod tests {
         let graph: Graph<&str> = Graph::new();
         assert_eq!(0, graph.num_vertices());
         assert_eq!(0, graph.num_edges());
+        assert_eq!(false, graph.has_cycle())
     }
 
     #[test]
@@ -255,7 +271,6 @@ mod tests {
         Ok(())
     }
 
-    // TODO more complex testing
     #[test]
     fn test_has_cycle() {
         let mut graph = Graph::new();
@@ -269,6 +284,18 @@ mod tests {
         assert_eq!(false, graph.has_cycle());
 
         graph.add_edge(&world, hello);
+        assert_eq!(true, graph.has_cycle());
+
+        graph.delete_edge(&world, &hello);
+        assert_eq!(false, graph.has_cycle());
+
+        let something = graph.add_vertex("Something");
+        let something_else = graph.add_vertex("Else");
+
+        graph.add_edge(&world, something);
+        graph.add_edge(&something, something_else);
+
+        graph.add_edge(&something_else, world);
         assert_eq!(true, graph.has_cycle());
     }
 }
