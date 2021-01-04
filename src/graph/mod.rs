@@ -41,7 +41,7 @@ impl<T: Eq + PartialEq> Graph<T> {
 
     // returns the next available label
     fn get_label(&mut self) -> usize {
-        self.available_labels.pop().unwrap_or(self.vertices.len())
+        self.available_labels.pop().unwrap_or(self.num_vertices())
     }
 
     // returns the number of vertices in the graph
@@ -84,7 +84,7 @@ impl<T: Eq + PartialEq> Graph<T> {
         None
     }
 
-    // returns true if the graph has a vertext with the given label
+    // returns true if the graph has a vertex with the given label
     pub fn has_vertex(&self, label: &usize) -> bool {
         for vertex in &self.vertices {
             if vertex.borrow().label == *label {
@@ -96,10 +96,13 @@ impl<T: Eq + PartialEq> Graph<T> {
 
     // removes the vertex with the given label from the graph and returns its value
     pub fn delete_vertex(&mut self, label: &usize) -> Result<T, GraphError> {
+
+        // remove the vertex from the neighbor lists of all vertices
         for vertex in &self.vertices {
             vertex.borrow_mut().delete_neighbor(label);
         }
 
+        // look for the vertex to be deleted
         for index in 0..self.vertices.len() {
 
             let vertex = self.vertices.get(index).unwrap();
@@ -115,28 +118,38 @@ impl<T: Eq + PartialEq> Graph<T> {
         Err(GraphError::VertexNotFound(*label))
     }
 
+    // add a directed edge to the graph from the first given label to the second given label
+    // returns true if the edge was added, false if it already exists
     pub fn add_edge(&self, label_source: &usize, label_sink: usize) -> Result<bool, GraphError> {
 
+        // return an error if the labels are equal
         if label_sink == *label_source {
             return Err(GraphError::InvalidEdge(*label_source, label_sink))
         }
 
+        // return an error if the sink is not in the graph
         if !self.has_vertex(&label_sink) {
             return Err(GraphError::VertexNotFound(label_sink))
         }
 
+        // add the sink to the source's neighbor list
         let vertex = self.get_vertex(label_source);
         if vertex.is_some() {
             let mut neighbors = vertex.unwrap().borrow_mut();
             if !neighbors.has_neighbor(&label_sink) {
                 neighbors.add_neighbor(label_sink);
+
+                // edge added
                 return Ok(true)
             }
+
+            // edge already exists
             return Ok(false)
         }
         Err(GraphError::VertexNotFound(*label_source))
     }
 
+    // returns true if a directed edge from the first given vertex label to the second exists
     pub fn has_edge(&self, label_source: &usize, label_sink: &usize) -> bool {
         let vertex = self.get_vertex(label_source);
         if vertex.is_some() {
@@ -145,20 +158,38 @@ impl<T: Eq + PartialEq> Graph<T> {
         false
     }
 
-    pub fn delete_edge(&self, label_source: &usize, label_sink: &usize) {
+    // remove a directed edge in the graph from the first given label to the second given label
+    // returns true if the edge was removed, false if it wasn't in the graph
+    pub fn delete_edge(&self, label_source: &usize, label_sink: &usize) -> Result<bool, GraphError> {
+
+        // return an error if the labels are equal
+        if *label_sink == *label_source {
+            return Err(GraphError::InvalidEdge(*label_source, *label_sink))
+        }
+
+        // return an error if the sink is not in the graph
+        if !self.has_vertex(&label_sink) {
+            return Err(GraphError::VertexNotFound(*label_sink))
+        }
+
         let vertex = self.get_vertex(label_source);
         if vertex.is_some() {
             let mut neighbors = vertex.unwrap().borrow_mut();
-            neighbors.delete_neighbor(label_sink);
+            return Ok(neighbors.delete_neighbor(label_sink));
         }
+        Err(GraphError::VertexNotFound(*label_source))
     }
 
+    // returns true if the graph has at least one cycle
     pub fn has_cycle(&self) -> bool {
         let mut visited = Vec::new();
         let mut rec_stack = Vec::new();
+
         for vertex in &self.vertices {
             let current_label = vertex.borrow().label.clone();
             if !visited.contains(&current_label) {
+
+                // call recursive util
                 if self.has_cycle_util(current_label, &mut visited, &mut rec_stack) {
                     return true;
                 }
@@ -167,11 +198,14 @@ impl<T: Eq + PartialEq> Graph<T> {
         false
     }
 
+    // recursive util function to detect cycles
     fn has_cycle_util(&self, current_label: usize, visited: &mut Vec<usize>, rec_stack: &mut Vec<usize>) -> bool {
         visited.push(current_label);
         rec_stack.push(current_label);
 
         for neighbor in &self.get_vertex(&current_label).unwrap().borrow().neighbors {
+
+            // if not visited recurse
             if !visited.contains(neighbor) {
                 if self.has_cycle_util(*neighbor, visited, rec_stack) {
                     return true;
@@ -181,6 +215,7 @@ impl<T: Eq + PartialEq> Graph<T> {
             }
         }
 
+        // remove from the stack
         for i in 0..rec_stack.len() {
             if *rec_stack.get(i).unwrap() == current_label {
                 rec_stack.remove(i);
@@ -255,15 +290,15 @@ mod tests {
         assert_eq!("Hello", graph.get_vertex(&hello).unwrap().borrow().value);
 
         let world = graph.add_vertex("World");
-        graph.add_edge(&hello, world);
+        graph.add_edge(&hello, world)?;
         assert_eq!(1, graph.num_edges());
         assert!(graph.has_edge(&hello, &world));
-        graph.delete_edge(&hello, &world);
+        graph.delete_edge(&hello, &world)?;
         assert_eq!(false, graph.has_edge(&hello, &world));
         assert_eq!(0, graph.num_edges());
 
         let delete = graph.add_vertex("nope");
-        graph.add_edge(&world, delete);
+        graph.add_edge(&world, delete)?;
         let deleted_value = graph.delete_vertex(&delete);
         assert_eq!("nope", deleted_value?);
         assert_eq!(2, graph.num_vertices());
@@ -272,7 +307,7 @@ mod tests {
     }
 
     #[test]
-    fn test_has_cycle() {
+    fn test_has_cycle() -> Result<(), GraphError>{
         let mut graph = Graph::new();
         assert_eq!(false, graph.has_cycle());
 
@@ -280,22 +315,23 @@ mod tests {
         assert_eq!(false, graph.has_cycle());
 
         let world = graph.add_vertex("World");
-        graph.add_edge(&hello, world);
+        graph.add_edge(&hello, world)?;
         assert_eq!(false, graph.has_cycle());
 
-        graph.add_edge(&world, hello);
+        graph.add_edge(&world, hello)?;
         assert_eq!(true, graph.has_cycle());
 
-        graph.delete_edge(&world, &hello);
+        graph.delete_edge(&world, &hello)?;
         assert_eq!(false, graph.has_cycle());
 
         let something = graph.add_vertex("Something");
         let something_else = graph.add_vertex("Else");
 
-        graph.add_edge(&world, something);
-        graph.add_edge(&something, something_else);
+        graph.add_edge(&world, something)?;
+        graph.add_edge(&something, something_else)?;
 
-        graph.add_edge(&something_else, world);
+        graph.add_edge(&something_else, world)?;
         assert_eq!(true, graph.has_cycle());
+        Ok(())
     }
 }
