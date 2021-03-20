@@ -3,7 +3,7 @@ use std::rc::Rc;
 use std::error::Error;
 use std::fmt;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 enum GraphError {
     VertexNotFound(usize),
     InvalidEdge(usize, usize)
@@ -65,11 +65,7 @@ impl<T: Eq + PartialEq> Graph<T> {
         let label = self.get_label();
 
         // make vertex
-        self.vertices.push(Rc::new(RefCell::new(Vertex {
-            label,
-            value,
-            neighbors: Vec::new(),
-        })));
+        self.vertices.push(Rc::new(RefCell::new(Vertex::new(label, value))));
 
         label
     }
@@ -92,6 +88,27 @@ impl<T: Eq + PartialEq> Graph<T> {
             }
         }
         false
+    }
+
+    // returns true if the graph has a given value
+    pub fn has_value(&self, value: &T) -> bool {
+        for vertex in &self.vertices {
+            if vertex.borrow().value == *value {
+                return true
+            }
+        }
+        false
+    }
+
+    // searches the graph for a given value
+    pub fn find_value(&self, value: &T) -> Vec<usize> {
+        let mut found = Vec::new();
+        for vertex in &self.vertices {
+            if vertex.borrow().value == *value {
+                found.push(vertex.borrow().label);
+            }
+        }
+        found
     }
 
     // removes the vertex with the given label from the graph and returns its value
@@ -225,7 +242,6 @@ impl<T: Eq + PartialEq> Graph<T> {
     }
 }
 
-#[derive(Eq, PartialEq)]
 struct Vertex<T: Eq + PartialEq> {
     label: usize,
     value: T,
@@ -233,6 +249,15 @@ struct Vertex<T: Eq + PartialEq> {
 }
 
 impl<T: Eq + PartialEq> Vertex<T> {
+
+    // create a new Vertex
+    fn new(label: usize, value: T) -> Vertex<T> {
+        Vertex {
+            label,
+            value,
+            neighbors: Vec::new()
+        }
+    }
 
     // add a neighbor to the vertex
     // returns true if added, false if the neighbor was already a neighbor
@@ -268,16 +293,34 @@ impl<T: Eq + PartialEq> Vertex<T> {
 
 }
 
+// TODO public comments
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_vertex() {
+        let mut test_one = Vertex::new(0, 1);
+        let test_two = Vertex::new(1, 2);
+        assert_eq!(false, test_one.has_neighbor(&test_two.label));
+        assert_eq!(0, test_one.num_neighbors());
+        test_one.add_neighbor(test_two.label);
+        assert_eq!(true, test_one.has_neighbor(&test_two.label));
+        assert_eq!(1, test_one.num_neighbors());
+        assert_eq!(true, test_one.delete_neighbor(&test_two.label));
+        assert_eq!(false, test_one.has_neighbor(&test_two.label));
+        assert_eq!(0, test_one.num_neighbors());
+    }
 
     #[test]
     fn test_empty_graph() {
         let graph: Graph<&str> = Graph::new();
         assert_eq!(0, graph.num_vertices());
         assert_eq!(0, graph.num_edges());
-        assert_eq!(false, graph.has_cycle())
+        assert_eq!(false, graph.has_cycle());
+        assert_eq!(false, graph.has_vertex(&4));
+        assert_eq!(false, graph.has_edge(&4, &5));
+        assert_eq!(false, graph.has_value(&"hello"))
     }
 
     #[test]
@@ -287,6 +330,11 @@ mod tests {
         let hello  = graph.add_vertex("Hello");
         assert_eq!(1, graph.num_vertices());
         assert!(graph.has_vertex(&hello));
+        assert!(graph.has_value(&"Hello"));
+        assert_eq!(vec![hello], graph.find_value(&"Hello"));
+        assert_eq!(false, graph.has_value(&"World"));
+        let test_vec:Vec<usize> = Vec::new();
+        assert_eq!(test_vec, graph.find_value(&"World"));
         assert_eq!("Hello", graph.get_vertex(&hello).unwrap().borrow().value);
 
         let world = graph.add_vertex("World");
@@ -332,6 +380,20 @@ mod tests {
 
         graph.add_edge(&something_else, world)?;
         assert_eq!(true, graph.has_cycle());
+        Ok(())
+    }
+
+    #[test]
+    fn test_graph_errors() -> Result<(), GraphError>{
+        let mut graph = Graph::new();
+        let hello  = graph.add_vertex("Hello");
+        let world = graph.add_vertex("World");
+        graph.add_edge(&hello, world)?;
+        assert_eq!(Err(GraphError::VertexNotFound(5)), graph.delete_vertex(&5));
+
+        assert_eq!(Err(GraphError::VertexNotFound(5)), graph.add_edge(&5, hello));
+        assert_eq!(Err(GraphError::VertexNotFound(5)), graph.add_edge(&world, 5));
+        assert_eq!(Err(GraphError::InvalidEdge(5, 5)), graph.add_edge(&5, 5));
         Ok(())
     }
 }
