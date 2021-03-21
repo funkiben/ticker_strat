@@ -17,25 +17,10 @@ use logging_manager::*;
 use std::path::Path;
 
 fn main() -> Result<(), Error> {
-    let logging_service = LoggingService::new(LoggingConfig {
-        logging_directory: Path::new("./logs/"),
-        max_dir_size: 100000,
-        buffer_size: 64,
-    });
-
-    // box logger
-    let logger = Box::new(logging_service);
-
-    // set global logger
-    log::set_boxed_logger(logger)
-        .map(|()| log::set_max_level(log::LevelFilter::Info))
-        .expect("Logging Service failed to start.");
-
-    server::start(Config {
+    server::listen_http(Config {
         addr: "0.0.0.0:80",
         connection_handler_threads: 5,
-        tls_config: None,
-        router: file_router("./web"),
+        router: file_router("./web/"),
     })
 }
 
